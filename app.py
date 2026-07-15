@@ -13,13 +13,30 @@ import streamlit as st
 from google import genai
 from config import API_KEY
 
-client = genai.Client(api_key=API_KEY)
-
 st.set_page_config(
     page_title="AI Chatbot",
     page_icon=" ",
     layout="centered"
 )
+
+if not API_KEY:
+    st.error("🔑 Gemini API Key is missing!")
+    st.info("""
+    To run this app on Streamlit Cloud, you need to set your Gemini API Key in the Streamlit Secrets:
+    
+    1. Go to your **Streamlit App Dashboard**.
+    2. Click on the app's settings (**Settings** -> **Secrets**).
+    3. Add the following:
+       ```toml
+       GOOGLE_GEMINI_API_KEY = "your_actual_api_key_here"
+       ```
+    4. Save the secrets and reboot the app.
+    
+    *If running locally, please add `GOOGLE_GEMINI_API_KEY=your_key` to a `.env` file in the root directory.*
+    """)
+    st.stop()
+
+client = genai.Client(api_key=API_KEY)
 
 st.title(" AI Chatbot")
 st.caption("Powered by Google Gemini")
@@ -31,6 +48,7 @@ st.sidebar.title("Settings")
 model_name = st.sidebar.selectbox(
     "Select Model",
     [
+        "gemini-3.5-flash",
         "gemini-2.5-flash",
         "gemini-2.5-pro"
     ]

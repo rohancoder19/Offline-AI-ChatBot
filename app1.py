@@ -5,14 +5,32 @@ from config import API_KEY
 from docx import Document
 from reportlab.platypus import SimpleDocTemplate, Paragraph
 from reportlab.lib.styles import getSampleStyleSheet
-
-client = genai.Client(api_key=API_KEY)
+import io
 
 st.set_page_config(
     page_title="AI Resume Builder",
     page_icon="📄",
     layout="wide"
 )
+
+if not API_KEY:
+    st.error("🔑 Gemini API Key is missing!")
+    st.info("""
+    To run this app on Streamlit Cloud, you need to set your Gemini API Key in the Streamlit Secrets:
+    
+    1. Go to your **Streamlit App Dashboard**.
+    2. Click on the app's settings (**Settings** -> **Secrets**).
+    3. Add the following:
+       ```toml
+       GOOGLE_GEMINI_API_KEY = "your_actual_api_key_here"
+       ```
+    4. Save the secrets and reboot the app.
+    
+    *If running locally, please add `GOOGLE_GEMINI_API_KEY=your_key` to a `.env` file in the root directory.*
+    """)
+    st.stop()
+
+client = genai.Client(api_key=API_KEY)
 
 st.title("📄 AI Resume Builder")
 
@@ -106,7 +124,7 @@ Return only the resume.
     with st.spinner("Generating Resume..."):
 
         response = client.models.generate_content(
-            model="gemini-2.5-flash",
+            model="gemini-3.5-flash",
             contents=prompt
         )
 
@@ -128,43 +146,39 @@ Return only the resume.
         "text/plain"
     )
 
-    # Create Word File
+    # Create Word File in memory
 
     doc = Document()
-
     doc.add_heading("Resume", level=1)
-
     doc.add_paragraph(resume)
 
-    doc.save("resume.docx")
+    doc_io = io.BytesIO()
+    doc.save(doc_io)
+    doc_io.seek(0)
 
-    with open("resume.docx", "rb") as file:
+    st.download_button(
+        "Download Word",
+        doc_io,
+        "resume.docx",
+        "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+    )
 
-        st.download_button(
-            "Download Word",
-            file,
-            "resume.docx",
-            "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-        )
-
-    # Create PDF
+    # Create PDF in memory
 
     styles = getSampleStyleSheet()
-
-    pdf = SimpleDocTemplate("resume.pdf")
-
+    pdf_io = io.BytesIO()
+    pdf = SimpleDocTemplate(pdf_io)
     story = []
 
     for line in resume.split("\n"):
         story.append(Paragraph(line, styles["BodyText"]))
 
     pdf.build(story)
+    pdf_io.seek(0)
 
-    with open("resume.pdf", "rb") as file:
-
-        st.download_button(
-            "Download PDF",
-            file,
-            "resume.pdf",
-            "application/pdf"
-        )
+    st.download_button(
+        "Download PDF",
+        pdf_io,
+        "resume.pdf",
+        "application/pdf"
+    )
